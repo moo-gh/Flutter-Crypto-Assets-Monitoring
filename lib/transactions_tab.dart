@@ -83,6 +83,7 @@ class Transaction {
     required this.changePercentage,
   });
 
+
   // Calculate profit/loss amount
   double get profitLoss {
     if (type.toLowerCase() == 'buy') {
