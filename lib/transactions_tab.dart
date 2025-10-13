@@ -83,6 +83,22 @@ class Transaction {
     required this.changePercentage,
   });
 
+  // Calculate profit/loss amount
+  double get profitLoss {
+    if (type.toLowerCase() == 'buy') {
+      return currentValue - totalPrice;
+    } else {
+      // For sell transactions, profit is the sale amount minus what we would have now
+      return totalPrice - currentValue;
+    }
+  }
+
+  // Check if this transaction is profitable
+  bool get isProfitable => profitLoss > 0;
+
+  // Check if this transaction has a loss
+  bool get hasLoss => profitLoss < 0;
+
   factory Transaction.fromJson(Map<String, dynamic> json) {
     return Transaction(
       id: json['id'],
@@ -273,6 +289,15 @@ class _TransactionsTabState extends State<TransactionsTab> {
     if (percentage > 0) {
       return Colors.green;
     } else if (percentage < 0) {
+      return Colors.red;
+    }
+    return Colors.grey;
+  }
+
+  Color getProfitLossColor(double profitLoss) {
+    if (profitLoss > 0) {
+      return Colors.green;
+    } else if (profitLoss < 0) {
       return Colors.red;
     }
     return Colors.grey;
@@ -593,20 +618,46 @@ class _TransactionsTabState extends State<TransactionsTab> {
                                     ),
                                   ],
                                 ),
-                                const SizedBox(height: 8),
-                                Container(
-                                  decoration: BoxDecoration(
-                                    color: getPercentageColor(transaction.changePercentage).withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                  child: Text(
-                                    '${transaction.changePercentage > 0 ? '+' : ''}${transaction.changePercentage.toStringAsFixed(2)}%',
-                                    style: TextStyle(
-                                      color: getPercentageColor(transaction.changePercentage),
-                                      fontWeight: FontWeight.bold,
+                                const SizedBox(height: 12),
+                                // Profit/Loss Section
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Profit/Loss',
+                                          style: TextStyle(
+                                            color: Colors.grey[600],
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                        Text(
+                                          '${transaction.profitLoss >= 0 ? '+' : ''}${formatPrice(transaction.profitLoss.abs(), transaction.market)}',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: getProfitLossColor(transaction.profitLoss),
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                  ),
+                                    Container(
+                                      decoration: BoxDecoration(
+                                        color: getPercentageColor(transaction.changePercentage).withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      child: Text(
+                                        '${transaction.changePercentage > 0 ? '+' : ''}${transaction.changePercentage.toStringAsFixed(2)}%',
+                                        style: TextStyle(
+                                          color: getPercentageColor(transaction.changePercentage),
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
