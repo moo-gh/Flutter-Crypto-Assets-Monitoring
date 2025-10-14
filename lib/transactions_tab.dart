@@ -110,14 +110,17 @@ class Transaction {
 
 class CoinStats {
   final double totalProfitLoss;
+  final double currentPrice;
 
   CoinStats({
     required this.totalProfitLoss,
+    required this.currentPrice,
   });
 
   factory CoinStats.fromJson(Map<String, dynamic> json) {
     return CoinStats(
       totalProfitLoss: double.tryParse(json['total_profit_loss']?.toString().replaceAll(',', '') ?? '0') ?? 0,
+      currentPrice: double.tryParse(json['current_price']?.toString().replaceAll(',', '') ?? '0') ?? 0,
     );
   }
 }
@@ -461,7 +464,7 @@ class _TransactionsTabState extends State<TransactionsTab> {
       ),
     ),
     
-    // Display total profit/loss if available
+    // Display coin statistics if available
     if (coinStats != null && selectedCoin != null)
       Container(
         margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
@@ -482,50 +485,102 @@ class _TransactionsTabState extends State<TransactionsTab> {
             width: 1,
           ),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        child: Column(
           children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            // Header with coin name and icon
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Total P&L for ${selectedCoin!.title}',
+                  '${selectedCoin!.title} (${selectedCoin!.code})',
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 16,
                     color: Colors.grey.shade700,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  '${coinStats!.totalProfitLoss >= 0 ? '+' : ''}${formatPrice(coinStats!.totalProfitLoss.abs(), 'irt')}',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: coinStats!.totalProfitLoss >= 0
+                        ? Colors.green.shade200
+                        : Colors.red.shade200,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    coinStats!.totalProfitLoss >= 0
+                        ? Icons.trending_up
+                        : Icons.trending_down,
                     color: coinStats!.totalProfitLoss >= 0
                         ? Colors.green.shade700
                         : Colors.red.shade700,
+                    size: 20,
                   ),
                 ),
               ],
             ),
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: coinStats!.totalProfitLoss >= 0
-                    ? Colors.green.shade200
-                    : Colors.red.shade200,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                coinStats!.totalProfitLoss >= 0
-                    ? Icons.trending_up
-                    : Icons.trending_down,
-                color: coinStats!.totalProfitLoss >= 0
-                    ? Colors.green.shade700
-                    : Colors.red.shade700,
-                size: 24,
-              ),
+            const SizedBox(height: 12),
+            
+            // Current Price and Total P&L
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // Current Price
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Current Price',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade600,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        formatPrice(coinStats!.currentPrice, 'irt'),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey.shade800,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                
+                const SizedBox(width: 16),
+                
+                // Total Profit/Loss
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        'Total P&L',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade600,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${coinStats!.totalProfitLoss >= 0 ? '+' : ''}${formatPrice(coinStats!.totalProfitLoss.abs(), 'irt')}',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: coinStats!.totalProfitLoss >= 0
+                              ? Colors.green.shade700
+                              : Colors.red.shade700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ],
         ),
