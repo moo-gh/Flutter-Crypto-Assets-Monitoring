@@ -173,6 +173,10 @@ class _TransactionsTabState extends State<TransactionsTab> {
   Coin? selectedCoin;
   bool isLoadingCoins = false;
   
+  // Date filtering variables
+  DateTime? dateFrom;
+  DateTime? dateTo;
+  
   // Coin statistics
   CoinStats? coinStats;
 
@@ -198,6 +202,33 @@ class _TransactionsTabState extends State<TransactionsTab> {
     }
   }
 
+  String _formatDateForApi(DateTime date) {
+    return '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+  }
+
+  String _buildApiUrl() {
+    String apiUrl = 'https://crypto.m-gh.com/api/v1/exc/transactions/';
+    List<String> params = [];
+    
+    if (selectedCoin != null) {
+      params.add('coin=${selectedCoin!.id}');
+    }
+    
+    if (dateFrom != null) {
+      params.add('date_from=${_formatDateForApi(dateFrom!)}');
+    }
+    
+    if (dateTo != null) {
+      params.add('date_to=${_formatDateForApi(dateTo!)}');
+    }
+    
+    if (params.isNotEmpty) {
+      apiUrl += '?${params.join('&')}';
+    }
+    
+    return apiUrl;
+  }
+
   Future<void> fetchTransactions() async {
     setState(() {
       isLoading = true;
@@ -205,10 +236,7 @@ class _TransactionsTabState extends State<TransactionsTab> {
     });
     
     try {
-      String apiUrl = 'https://crypto.m-gh.com/api/v1/exc/transactions/';
-      if (selectedCoin != null) {
-        apiUrl += '?coin=${selectedCoin!.id}';
-      }
+      String apiUrl = _buildApiUrl();
       
       final response = await http.get(
         Uri.parse(apiUrl),
@@ -371,6 +399,198 @@ class _TransactionsTabState extends State<TransactionsTab> {
       coinStats = null; // Reset coin stats
     });
     fetchTransactions(); // Fetch transactions with new filter
+  }
+
+  void _onDateFromSelected(DateTime? date) {
+    setState(() {
+      dateFrom = date;
+      if (dateTo != null && date != null && date.isAfter(dateTo!)) {
+        dateTo = null; // Clear 'to' date if 'from' date is after it
+      }
+      transactions.clear();
+      nextPageUrl = null;
+      coinStats = null;
+    });
+    fetchTransactions();
+  }
+
+  void _onDateToSelected(DateTime? date) {
+    setState(() {
+      dateTo = date;
+      transactions.clear();
+      nextPageUrl = null;
+      coinStats = null;
+    });
+    fetchTransactions();
+  }
+
+  void _clearAllFilters() {
+    setState(() {
+      selectedCoin = null;
+      dateFrom = null;
+      dateTo = null;
+      transactions.clear();
+      nextPageUrl = null;
+      coinStats = null;
+    });
+    fetchTransactions();
+  }
+
+  Future<void> _selectDate(BuildContext context, {required bool isFromDate}) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: isFromDate 
+          ? (dateFrom ?? DateTime.now())
+          : (dateTo ?? dateFrom ?? DateTime.now()),
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: Theme.of(context).colorScheme.copyWith(
+              primary: Theme.of(context).colorScheme.primary,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      if (isFromDate) {
+        _onDateFromSelected(picked);
+      } else {
+        _onDateToSelected(picked);
+      }
+    }
+  }
+
+  Widget _buildDateFilters() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.date_range,
+                size: 20,
+                color: Colors.grey.shade600,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Date Range',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey.shade700,
+                ),
+              ),
+              const Spacer(),
+              if (dateFrom != null || dateTo != null)
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      dateFrom = null;
+                      dateTo = null;
+                      transactions.clear();
+                      nextPageUrl = null;
+                      coinStats = null;
+                    });
+                    fetchTransactions();
+                  },
+                  child: Text(
+                    'Clear',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              // From Date
+              Expanded(
+                child: InkWell(
+                  onTap: () => _selectDate(context, isFromDate: true),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'From',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          dateFrom != null
+                              ? DateFormat('yyyy-MM-dd').format(dateFrom!)
+                              : 'Select date',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: dateFrom != null ? FontWeight.w500 : FontWeight.normal,
+                            color: dateFrom != null ? Colors.black87 : Colors.grey.shade500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              // To Date
+              Expanded(
+                child: InkWell(
+                  onTap: () => _selectDate(context, isFromDate: false),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'To',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          dateTo != null
+                              ? DateFormat('yyyy-MM-dd').format(dateTo!)
+                              : 'Select date',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: dateTo != null ? FontWeight.w500 : FontWeight.normal,
+                            color: dateTo != null ? Colors.black87 : Colors.grey.shade500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildCoinDropdown() {
@@ -595,6 +815,12 @@ class _TransactionsTabState extends State<TransactionsTab> {
       children: [
         // Show coin dropdown if coins are loaded
         if (coins.isNotEmpty) _buildCoinDropdown(),
+        
+        // Show date filters
+        _buildDateFilters(),
+        
+        // Show filter actions if there are active filters
+        _buildFilterActions(),
         
         // Show loading indicator or transactions
         Expanded(
