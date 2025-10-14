@@ -69,6 +69,7 @@ class Transaction {
   final double currentValue;
   final String date;
   final double changePercentage;
+  final double profitLoss;
 
   Transaction({
     required this.id,
@@ -81,18 +82,8 @@ class Transaction {
     required this.currentValue,
     required this.date,
     required this.changePercentage,
+    required this.profitLoss,
   });
-
-
-  // Calculate profit/loss amount
-  double get profitLoss {
-    if (type.toLowerCase() == 'buy') {
-      return currentValue - totalPrice;
-    } else {
-      // For sell transactions, profit is the sale amount minus what we would have now
-      return totalPrice - currentValue;
-    }
-  }
 
   // Check if this transaction is profitable
   bool get isProfitable => profitLoss > 0;
@@ -106,12 +97,55 @@ class Transaction {
       type: json['type'] ?? '',
       market: json['market'] ?? '',
       coin: json['coin'] ?? '',
-      price: (json['price'] ?? 0).toDouble(),
-      quantity: (json['quantity'] ?? 0).toDouble(),
-      totalPrice: (json['total_price'] ?? 0).toDouble(),
-      currentValue: (json['current_value'] ?? 0).toDouble(),
+      price: double.tryParse(json['price']?.toString().replaceAll(',', '') ?? '0') ?? 0,
+      quantity: double.tryParse(json['quantity']?.toString().replaceAll(',', '') ?? '0') ?? 0,
+      totalPrice: double.tryParse(json['total_price']?.toString().replaceAll(',', '') ?? '0') ?? 0,
+      currentValue: double.tryParse(json['current_value']?.toString().replaceAll(',', '') ?? '0') ?? 0,
       date: json['date'] ?? '',
-      changePercentage: (json['change_percentage'] ?? 0).toDouble(),
+      changePercentage: double.tryParse(json['change_percentage']?.toString().replaceAll(',', '') ?? '0') ?? 0,
+      profitLoss: double.tryParse(json['profit_loss']?.toString().replaceAll(',', '') ?? '0') ?? 0,
+    );
+  }
+}
+
+class CoinStats {
+  final double totalProfitLoss;
+
+  CoinStats({
+    required this.totalProfitLoss,
+  });
+
+  factory CoinStats.fromJson(Map<String, dynamic> json) {
+    return CoinStats(
+      totalProfitLoss: double.tryParse(json['total_profit_loss']?.toString().replaceAll(',', '') ?? '0') ?? 0,
+    );
+  }
+}
+
+class TransactionsResponse {
+  final int count;
+  final String? next;
+  final String? previous;
+  final CoinStats? coinStats;
+  final List<Transaction> results;
+
+  TransactionsResponse({
+    required this.count,
+    this.next,
+    this.previous,
+    this.coinStats,
+    required this.results,
+  });
+
+  factory TransactionsResponse.fromJson(Map<String, dynamic> json) {
+    return TransactionsResponse(
+      count: json['count'] ?? 0,
+      next: json['next'],
+      previous: json['previous'],
+      coinStats: json['coin_stats'] != null ? CoinStats.fromJson(json['coin_stats']) : null,
+      results: (json['results'] as List<dynamic>?)
+          ?.map((item) => Transaction.fromJson(item))
+          .toList() ?? [],
     );
   }
 }
@@ -135,6 +169,9 @@ class _TransactionsTabState extends State<TransactionsTab> {
   List<Coin> coins = [];
   Coin? selectedCoin;
   bool isLoadingCoins = false;
+  
+  // Coin statistics
+  CoinStats? coinStats;
 
   @override
   void initState() {
@@ -175,12 +212,11 @@ class _TransactionsTabState extends State<TransactionsTab> {
       ).timeout(const Duration(seconds: 15));
       
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
+        final transactionsResponse = TransactionsResponse.fromJson(json.decode(response.body));
         setState(() {
-          transactions = (data['results'] as List)
-              .map((item) => Transaction.fromJson(item))
-              .toList();
-          nextPageUrl = data['next'];
+          transactions = transactionsResponse.results;
+          nextPageUrl = transactionsResponse.next;
+          coinStats = transactionsResponse.coinStats;
           isLoading = false;
         });
       } else {
@@ -210,12 +246,10 @@ class _TransactionsTabState extends State<TransactionsTab> {
       ).timeout(const Duration(seconds: 15));
       
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
+        final transactionsResponse = TransactionsResponse.fromJson(json.decode(response.body));
         setState(() {
-          transactions.addAll((data['results'] as List)
-              .map((item) => Transaction.fromJson(item))
-              .toList());
-          nextPageUrl = data['next'];
+          transactions.addAll(transactionsResponse.results);
+          nextPageUrl = transactionsResponse.next;
           isLoadingMore = false;
         });
       } else {
@@ -331,19 +365,22 @@ class _TransactionsTabState extends State<TransactionsTab> {
       selectedCoin = coin;
       transactions.clear(); // Clear current transactions
       nextPageUrl = null; // Reset pagination
+      coinStats = null; // Reset coin stats
     });
     fetchTransactions(); // Fetch transactions with new filter
   }
 
   Widget _buildCoinDropdown() {
-    return Container(
-      margin: const EdgeInsets.all(16.0),
-      padding: const EdgeInsets.symmetric(horizontal: 12.0),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade300),
-        borderRadius: BorderRadius.circular(8.0),
-      ),
-      child: DropdownButtonHideUnderline(
+    return Column(
+      children: [
+        Container(
+          margin: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.symmetric(horizontal: 12.0),
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey.shade300),
+            borderRadius: BorderRadius.circular(8.0),
+          ),
+          child: DropdownButtonHideUnderline(
         child: DropdownButton<Coin?>(
           value: selectedCoin,
           hint: const Text('Filter by Coin'),
@@ -422,6 +459,78 @@ class _TransactionsTabState extends State<TransactionsTab> {
           ],
         ),
       ),
+    ),
+    
+    // Display total profit/loss if available
+    if (coinStats != null && selectedCoin != null)
+      Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+        padding: const EdgeInsets.all(16.0),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: coinStats!.totalProfitLoss >= 0
+                ? [Colors.green.shade50, Colors.green.shade100]
+                : [Colors.red.shade50, Colors.red.shade100],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(12.0),
+          border: Border.all(
+            color: coinStats!.totalProfitLoss >= 0
+                ? Colors.green.shade300
+                : Colors.red.shade300,
+            width: 1,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Total P&L for ${selectedCoin!.title}',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey.shade700,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${coinStats!.totalProfitLoss >= 0 ? '+' : ''}${formatPrice(coinStats!.totalProfitLoss.abs(), 'irt')}',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: coinStats!.totalProfitLoss >= 0
+                        ? Colors.green.shade700
+                        : Colors.red.shade700,
+                  ),
+                ),
+              ],
+            ),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: coinStats!.totalProfitLoss >= 0
+                    ? Colors.green.shade200
+                    : Colors.red.shade200,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                coinStats!.totalProfitLoss >= 0
+                    ? Icons.trending_up
+                    : Icons.trending_down,
+                color: coinStats!.totalProfitLoss >= 0
+                    ? Colors.green.shade700
+                    : Colors.red.shade700,
+                size: 24,
+              ),
+            ),
+          ],
+        ),
+      ),
+      ],
     );
   }
 
