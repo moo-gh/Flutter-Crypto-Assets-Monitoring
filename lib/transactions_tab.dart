@@ -194,12 +194,36 @@ class _TransactionsTabState extends State<TransactionsTab> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Show coin dropdown if coins are loaded
-        CoinDropdown(
-          coins: coins,
-          selectedCoin: selectedCoin,
-          onCoinSelected: _onCoinSelected,
-          isLoading: isLoadingCoins,
+        // Filters row - coin dropdown and date filters side by side
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Coin dropdown takes up less space
+              Expanded(
+                flex: 2,
+                child: CoinDropdown(
+                  coins: coins,
+                  selectedCoin: selectedCoin,
+                  onCoinSelected: _onCoinSelected,
+                  isLoading: isLoadingCoins,
+                ),
+              ),
+              const SizedBox(width: 12),
+              // Date filters take up more space
+              Expanded(
+                flex: 3,
+                child: DateFilters(
+                  dateFrom: dateFrom,
+                  dateTo: dateTo,
+                  onDateFromSelected: _onDateFromSelected,
+                  onDateToSelected: _onDateToSelected,
+                  onClearFilters: _clearDateFilters,
+                ),
+              ),
+            ],
+          ),
         ),
         
         // Display coin statistics if available
@@ -208,15 +232,6 @@ class _TransactionsTabState extends State<TransactionsTab> {
             coinStats: coinStats!,
             selectedCoin: selectedCoin!,
           ),
-        
-        // Show date filters
-        DateFilters(
-          dateFrom: dateFrom,
-          dateTo: dateTo,
-          onDateFromSelected: _onDateFromSelected,
-          onDateToSelected: _onDateToSelected,
-          onClearFilters: _clearDateFilters,
-        ),
         
         // Show filter actions if there are active filters
         FilterActions(

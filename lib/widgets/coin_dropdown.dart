@@ -24,7 +24,7 @@ class CoinDropdown extends StatelessWidget {
     }
 
     return Container(
-      margin: const EdgeInsets.all(16.0),
+      margin: const EdgeInsets.symmetric(vertical: 16.0),
       padding: const EdgeInsets.symmetric(horizontal: 12.0),
       decoration: BoxDecoration(
         border: Border.all(color: Colors.grey.shade300),

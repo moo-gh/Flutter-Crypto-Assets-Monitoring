@@ -1,5 +1,5 @@
 class AppConstants {
-  static const String appVersion = "v1.12.0";
+  static const String appVersion = "v1.13.0";
   static const String appName = "Crypto Assets Manager";
   
   // Full app name with version
