@@ -303,4 +303,4 @@ class _TransactionsTabState extends State<TransactionsTab> {
       ],
     );
   }
-} 
+}
