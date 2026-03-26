@@ -13,7 +13,7 @@ class CryptoIconCacheManager {
     ),
   );
   
-  // Clear cache method for manual cache management
+  // Clear cache method
   static Future<void> clearCache() async {
     await instance.emptyCache();
   }
