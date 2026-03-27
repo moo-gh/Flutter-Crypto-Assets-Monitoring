@@ -6,8 +6,8 @@ class CryptoIconCacheManager {
   static CacheManager instance = CacheManager(
     Config(
       key,
-      stalePeriod: const Duration(days: 7), // Icons are cached for 7 days
-      maxNrOfCacheObjects: 200, // Maximum 200 cached icons
+      stalePeriod: const Duration(days: 7), // Icons are cached
+      maxNrOfCacheObjects: 200, // Maximum 200 cached
       repo: JsonCacheInfoRepository(databaseName: key),
       fileService: HttpFileService(),
     ),
