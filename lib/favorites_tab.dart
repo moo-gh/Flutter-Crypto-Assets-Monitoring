@@ -230,7 +230,7 @@ class _FavoritesTabState extends State<FavoritesTab> {
     return Colors.white;
   }
 
-  // Helper method to convert hex color string to Color
+  // Helper method to convert hex color string
   Color _hexToColor(String hexString) {
     final buffer = StringBuffer();
     if (hexString.length == 6 || hexString.length == 7) buffer.write('ff');
