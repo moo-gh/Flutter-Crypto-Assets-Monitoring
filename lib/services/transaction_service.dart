@@ -75,7 +75,7 @@ class TransactionService {
     List<Coin> allCoins = [];
     String? nextUrl = '$_baseUrl/coins/?page=1';
     
-    // Fetch all pages of coins
+    // Fetch all pages
     while (nextUrl != null) {
       final response = await http.get(Uri.parse(nextUrl))
           .timeout(const Duration(seconds: 10));
