@@ -492,7 +492,7 @@ class _FavoritesTabState extends State<FavoritesTab> {
             ? Theme.of(context).colorScheme.primary
             : Theme.of(context).colorScheme.secondary;
             
-        // Get background color for specific coins with dark logos
+        // Get background color for specific coins
         final bgColor = getCoinLogoBackground(coin);
             
         return Card(
