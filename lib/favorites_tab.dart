@@ -486,7 +486,7 @@ class _FavoritesTabState extends State<FavoritesTab> {
         final coin = cryptoCoins[index];
         final formattedPrice = formatPrice(coin.price);
         
-        // Alternate between primary and secondary colors for list items
+        // Alternate between primary and secondary colors
         final isEven = index % 2 == 0;
         final iconColor = isEven
             ? Theme.of(context).colorScheme.primary
