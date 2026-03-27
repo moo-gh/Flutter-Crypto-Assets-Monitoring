@@ -406,7 +406,7 @@ class _FavoritesTabState extends State<FavoritesTab> {
   Widget _buildFeaturedCryptoCard(CryptoCoin coin) {
     final formattedPrice = formatPrice(coin.price);
     
-    // Use different colors for different coins
+    // Use different colors
     Color cardColor;
     Color iconColor;
     
